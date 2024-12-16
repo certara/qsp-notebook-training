@@ -1,0 +1,16 @@
+parameter,unit,value
+volume_central,L,5
+volume_peripheral,L,13
+R_per_cell,1,1.00E+04
+cell_per_mL,1/mL,1.00E+06
+kon,1/nM/s,0.001
+kd_mab,nM,0.1
+el_half,d,28
+R_half,min,60
+Pdist,1,0.12
+Tdist_hr,hr,12
+BW,kg,70
+mw,Da,1.50E+05
+F_bioavail,1,0.95
+Thalf_abs_h,hr,0.9
+t_end_h,hr,72

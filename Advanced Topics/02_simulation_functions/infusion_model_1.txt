@@ -1,0 +1,17 @@
+%% ReactionModel@2
+
+time_unit = s
+
+% components
+
+# Infusion parameters
+ 
+# compartments
+V_L                       := 1:L
+solution~3                 = V_L
+  
+# states 
+drug@solution             *= 0:(nmol)  # Drug state
+
+# routes
+IV_nmol: nmol = @(); drug += amt

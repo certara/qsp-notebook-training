@@ -1,0 +1,19 @@
+%% ReactionModel@2
+% components
+# The following model serves as a basic example of relationship syntax
+# Parameters
+kon := 1e-6:(1/nM/s)
+Kd := 5:nM
+
+# Use the ?= syntax to specify a bound variable, which will be solved for in the below relationship.
+# The right-hand side of the ?= specifies the initial guess for the relationship solver.
+koff ?= 1:(1/s)
+
+# The relationship governing Kd, koff, kon.  Note we could explicitly solve for koff as an assignment
+# here, relationships allow for more general systems of equations for which an explicit solution is
+# impossible or impractical.  
+Kd == koff / kon
+
+# This is not necessary here, but we can specify inequality constraints >= or <= among bound variables
+# and other predetermined constants as well.  For example,
+koff >= 1e-8:(1/s)

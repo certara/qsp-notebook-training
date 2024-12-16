@@ -1,0 +1,20 @@
+# Emax
+    # A reaction model of a emax reaction
+    # Includes basic initial condition, assignments, and reaction
+    %% ReactionModel@2
+    % components
+
+    # parameters
+    emin := 0
+    emax := 1e-3
+    ec50 := 5.0
+    b0 := 1
+    n := 2
+
+    # compartment
+    v~3 = 2
+
+    a@v *= 1
+    b@v *= b0
+
+    a -> b; emax=emax, ec50=ec50, n=n, emin=emin

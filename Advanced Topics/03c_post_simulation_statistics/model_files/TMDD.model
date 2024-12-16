@@ -1,0 +1,41 @@
+%% ReactionModel@2
+time_unit = d
+default_state_unit = nmol
+
+% components
+# Parameters
+kon := nan:(1/nM/d)
+KD := nan:nM
+ksyn := nan:(nmol/d)
+R0 := nan:nmol
+kel := nan:(1/d)
+kint := nan:(1/d)
+k12 := nan:(1/d)
+k21 := nan:(1/d)
+
+# Assignments
+koff:(1/d) = kon * KD
+kdeg:(1/d) = ksyn / R0
+V = 1:L
+V2 = 1:L
+dose = 500:nmol
+
+# Compartments
+central~3 = V
+peripheral~3 = V2
+
+# States
+L@central    *= 0
+R@central    *= R0
+P@central    *= 0
+A@peripheral *= 0
+
+# Reactions
+L + R <-> P ; kf=kon, kr=koff
+L ->        ; kf=kel
+ <-> R      ; kf=ksyn, kr=kdeg
+P ->        ; kf=kint
+L <-> A     ; kf=k12, kr=k21
+
+# Routes
+bolus:nmol = @(times=[0], amounts=[dose]); L += amt

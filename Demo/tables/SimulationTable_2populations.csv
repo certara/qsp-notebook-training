@@ -1,0 +1,17 @@
+dose_mpk,clearance,schedule
+0.01,fast,repeat
+0.03,fast,repeat
+0.1,fast,repeat
+0.3,fast,repeat
+0.01,fast,single
+0.03,fast,single
+0.1,fast,single
+0.3,fast,single
+0.01,slow,repeat
+0.03,slow,repeat
+0.1,slow,repeat
+0.3,slow,repeat
+0.01,slow,single
+0.03,slow,single
+0.1,slow,single
+0.3,slow,single

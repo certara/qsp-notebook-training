@@ -1,0 +1,59 @@
+%% ReactionModel@2
+
+initialization = initial_value()
+time_unit = s
+default_state_unit = nmol
+
+% components
+
+# compartments
+well~3 = V_L
+membrane~2 = surfacearea_dm2
+
+# unit conversions
+uL_per_L  = 1e6:(uL/L)
+count_per_nmol = (6.022e23/1e9):(1/nmol)
+um_per_dm  = (1e6/10):(um/dm)
+
+# parameters
+V_uL := 100:uL
+kon_tr := 1e-3:(1/nM/s)
+kon_er := 1e-3:(1/nM/s)
+kon2_tr := 200:(dm^2/nmol/s)
+KD_tr := 1:nM
+KD_er := 10:nM
+er_rpc   := 1e4
+tr_rpc   := 1e4
+ec_count := 3e4
+tc_count := 3e5
+area_per_cell_um2 := 200:(um^2)
+
+# assignments
+V_L = V_uL / uL_per_L
+koff_tr = KD_tr * kon_tr
+koff_er = KD_er * kon_er
+kon2_er = kon2_tr * kon_er / kon_tr
+er_nmol  = er_rpc * ec_count / count_per_nmol
+tr_nmol  = tr_rpc * tc_count / count_per_nmol
+surfacearea_dm2 = (ec_count + tc_count) * area_per_cell_um2 / (um_per_dm)^2
+
+# states
+d_x_x@well        *= 0
+tr@membrane       *= tr_nmol
+er@membrane       *= er_nmol
+d_x_tr@membrane   *= 0
+d_er_x@membrane   *= 0
+d_er_tr@membrane  *= 0
+
+# doses
+d_nM:nM = @(); d_x_x += amt*V_L
+
+# reactions
+d_x_x + tr <-> d_x_tr; kf = kon_tr, kr = koff_tr
+d_x_x + er <-> d_er_x; kf = kon_er, kr = koff_er
+d_er_x + tr <-> d_er_tr; kf = kon2_tr, kr = koff_tr
+d_x_tr + er <-> d_er_tr; kf = kon2_er, kr = koff_er
+
+# outputs
+trimer_nM                 = d_er_tr/V_L
+RO_tr_percent             = 100 * (d_x_tr + d_er_tr) / (tr + d_x_tr + d_er_tr + 1e-15:nmol)

@@ -1,0 +1,12 @@
+,parameter,value,unit
+0,V_uL,100.0,uL
+1,kon_tr,0.001,(1/nM/s)
+2,kon_er,0.001,(1/nM/s)
+3,kon2_tr,200.0,(dm^2/nmol/s)
+4,KD_tr,1.0,nM
+5,KD_er,10.0,nM
+6,er_rpc,10000.0,1
+7,tr_rpc,10000.0,1
+8,ec_count,30000.0,1
+9,tc_count,300000.0,1
+10,area_per_cell_um2,200.0,(um^2)

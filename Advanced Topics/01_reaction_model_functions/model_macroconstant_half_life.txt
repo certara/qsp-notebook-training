@@ -1,0 +1,17 @@
+# A reaction model of a simple decay using half life first order reaction type
+    %% ReactionModel@2
+    % components
+
+    # parameters
+    thalf := 0.5
+    b0 := 2
+
+    # compartment
+    v~3 = 5
+    w~3 = 2
+
+    a@v *= 1
+    b@w *= b0
+
+
+    a -> b; thalf = thalf

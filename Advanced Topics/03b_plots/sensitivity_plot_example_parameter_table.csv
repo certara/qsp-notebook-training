@@ -1,0 +1,16 @@
+,parameter,value,unit
+0,volume_central,5.0,L
+1,R1_per_cell,10000.0,1
+2,cell_per_mL,1000000.0,(1/mL)
+3,kon,0.001,(1/nM/s)
+4,kd_mab,26.01116,nM
+5,el_half,28.0,d
+6,abs_half,2.5,d
+7,R1_half,60.0,min
+8,BW,70.0,kg
+9,mw,150000.0,(g/mol)
+10,dose,1.0,(mg/kg)
+11,dose_count,7.0,1
+12,Thalf_cytokine_h,6.0,hr
+13,RO50_perc,5.0,1
+14,ksecrete_max_nmolpercellsec,1e-13,(nmol/s)

@@ -1,0 +1,9 @@
+dose_mpk,schedule,route,amounts,amount_unit,times,time_unit
+0.01,repeat,IV_mpk,0.01,mg/kg,"[0,7,14]",d
+0.03,repeat,IV_mpk,0.03,mg/kg,"[0,7,14]",d
+0.1,repeat,IV_mpk,0.1,mg/kg,"[0,7,14]",d
+0.3,repeat,IV_mpk,0.3,mg/kg,"[0,7,14]",d
+0.01,single,IV_mpk,0.01,mg/kg,0,d
+0.03,single,IV_mpk,0.03,mg/kg,0,d
+0.1,single,IV_mpk,0.1,mg/kg,0,d
+0.3,single,IV_mpk,0.3,mg/kg,0,d

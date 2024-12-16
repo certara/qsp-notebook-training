@@ -1,0 +1,21 @@
+%% ReactionModel@2
+
+time_unit = s
+
+% components
+amount_infusion       := 500:nmol
+duration_infusion     := 50:s
+
+# Calculate infusion rate
+start_time1           := 0:s           # Time first injection starts
+start_time2           := 100:s         # Time second injection starts
+ 
+# compartments
+V_L                   := 1:L
+solution~3             = V_L
+
+# states 
+drug@solution         *= 0:nmol        # Drug state
+
+# routes
+IV = @(times=[start_time1, start_time2], amounts=[amount_infusion, amount_infusion], durations=[duration_infusion, duration_infusion]); drug += amt

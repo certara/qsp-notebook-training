@@ -1,0 +1,9 @@
+parameter,value,unit,is_fit,lower_bound,upper_bound
+kon,0.01,1/nM/d,True,0,inf
+KD,0.015,nM,False,0,inf
+ksyn,1,nmol/d,True,0,inf
+R0,400,nmol,False,0,inf
+kel,0.1,1/d,False,0,inf
+kint,0.01,1/d,True,0,inf
+k12,0.0002,1/d,False,0,inf
+k21,0.009,1/d,False,0,inf

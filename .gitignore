@@ -1,0 +1,18 @@
+# Python cache folders
+.ipynb_checkpoints
+__pycache__
+
+# MATLAB autosave files
+.m~
+
+# git demo subfolders
+git-command-line-demo/RemoteProject.git
+git-command-line-demo/local-1
+git-command-line-demo/local-2
+
+# swap files
+*~
+*.swp
+
+# vscode user settings
+.vscode/settings.json

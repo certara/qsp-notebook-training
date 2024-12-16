@@ -1,0 +1,3 @@
+binding_strength,times,times_unit
+strong,"[0, 86400, 2*86400]",s
+weak,"[1000, 87400, pow(2,3)*20000]",s

@@ -1,0 +1,18 @@
+# Equilibrium
+# A reaction model of a binding reaction
+
+%% ReactionModel@2
+% components
+Kd := 0.50
+kon := 3
+b0 := 2
+dose := 0.4
+BW := -70
+
+
+koff = Kd * kon
+a* = 1
+b* = b0
+c* = 0
+
+a + b <-> c; rf = kon * a * b, rr = koff * c
