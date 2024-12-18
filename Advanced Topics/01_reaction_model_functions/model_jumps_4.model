@@ -1,0 +1,151 @@
+%% ReactionModel@2
+
+initialization     = steady_state(time_scale=24*60*60*100:s)
+
+time_unit          = s
+default_state_unit = nmol
+
+
+% components
+
+
+#---------------------------------------------------------------------------------------
+# PARAMETERS
+#---------------------------------------------------------------------------------------
+# volumes
+volume_central                    := 0.15:L
+volume_tumor_initial              := 0.01:L
+volume_tumor_max                  := 0.1:L
+volume_cell_tumor                 := 1e-11:L
+
+
+
+# initial conditions
+rpc_tumor                         := 250000   # receptor per cell
+
+
+# half-lives
+thalf_R_hr                        := 24:hr
+thalf_solR_hr                     := 3.5:hr
+
+# clearance and distribution of soluble receptors
+pdist12_solR                      := 0.21
+tdist12_solR_hr                   := 11:hr
+
+# receptor shedding
+kshed_R                           := 2.6e-5:(1/s)
+
+# tumor dynamics
+tdoubling_d                       := 6:d       #  doubling time (exponential growth)  
+
+
+#---------------------------------------------------------------------------------------
+# ASSIGNMENTS
+#---------------------------------------------------------------------------------------
+
+# Conversion factors and constants
+#---------------------------------
+SECONDS_PER_MINUTE                 = 60:(s/min)
+MINUTES_PER_HOUR                   = 60:(min/hr)
+SECONDS_PER_HOUR                   = SECONDS_PER_MINUTE * MINUTES_PER_HOUR
+HOURS_PER_DAY                      = 24:(hr/d)
+SECONDS_PER_DAY:(s/d)              = SECONDS_PER_HOUR * HOURS_PER_DAY
+mL_per_L                           = 1e3:(mL/L)
+mg_per_g                           = 1e3:(mg/g)
+ug_per_g                           = 1e6:(ug/g)
+nmol_per_mol                       = 1e9:(nmol/mol)
+N_AV                               = 6.022e23:(1/mol)
+
+
+# parameter relationships
+#------------------------
+
+# tumor volume and number of tumor cells
+Ncell_tumor_initial                = volume_tumor_initial/volume_cell_tumor               # initial number of cells in tumor volume
+Ncell_tumor_max                    = volume_tumor_max/volume_cell_tumor                   # carrying capacity of tumor cells
+volume_tumor                       = Ncell_tumor * volume_cell_tumor                      # tumor volume from number of cells at a given time
+
+# receptor internalization/elimination
+kint_R                             = log(2)/(thalf_R_hr * SECONDS_PER_HOUR)
+kdeg_solR                          = log(2)/(thalf_solR_hr * SECONDS_PER_HOUR)
+
+# receptor synthesis rate per cell
+ksynth_R              :(nmol/s)    =  rpc_tumor * (kint_R + kshed_R) * nmol_per_mol/N_AV
+
+# distribution of Ab and PL
+Q12_solR                           = log(2)/(tdist12_solR_hr * SECONDS_PER_HOUR)
+k12_solR                           = Q12_solR * pdist12_solR/(pdist12_solR + volume_central/volume_tumor)
+k21_solR                           = Q12_solR * (volume_central/volume_tumor)/(pdist12_solR + volume_central/volume_tumor)
+
+# tumor
+kgrowth_exp          :(1/s)        = log(2)/(tdoubling_d * SECONDS_PER_DAY)
+specific_growth_rate :(1/s)        = indicator_growth_tumor * kgrowth_exp * (1-Ncell_tumor/Ncell_tumor_max) # (1/Ncell)*(dNcell/dt) for a logistic growth model
+
+
+#---------------------------------------------------------------------------------------
+# States 
+#---------------------------------------------------------------------------------------
+
+# compartments
+# ------------
+central                  ~ 3                   = volume_central
+tumor                    ~ 3                   = volume_tumor
+
+
+# states
+#-------
+# central compartment
+solR_central             @ central            *= 0
+
+# tumor compartment
+R_tumor                  @ tumor              *= 0
+solR_tumor               @ tumor              *= 0
+
+Ncell_tumor              @ tumor       :1     *= Ncell_tumor_initial
+indicator_growth_tumor   @ tumor       :1     *= 0                       # when set to 0, tumor doesn't grow. set to 1 to model tumor growth.
+
+
+
+
+#---------------------------------------------------------------------------------------
+# Reactions 
+#---------------------------------------------------------------------------------------
+
+# central compartment
+#--------------------
+solR_central       -> ;                  kf = kdeg_solR
+solR_central      <-> solR_tumor;        kf = k12_solR,     kr = k21_solR 
+
+
+# tumor compartment
+#------------------
+
+# tumor growth
+                   -> Ncell_tumor;       rf = specific_growth_rate * Ncell_tumor
+                   
+# receptor dynamics induced by tumor growth
+                   -> R_tumor;           rf = specific_growth_rate * Ncell_tumor * rpc_tumor * (nmol_per_mol/N_AV)
+
+# receptor synthesis and internalization
+                   -> R_tumor;           rf = ksynth_R * Ncell_tumor
+R_tumor            -> ;                  kf = kint_R
+                        
+# solube receptor dynamics
+R_tumor            -> solR_tumor;        kf = kshed_R
+solR_tumor         -> ;                  kf = kdeg_solR
+
+
+#---------------------------------------------------------------------------------------
+# Jumps 
+#---------------------------------------------------------------------------------------
+# if the model is run via SteadyState() initialization, then that'd achieve steady-state of
+# all states. Tumor volume would remain at the initial value and the associated receptors would
+# then achieve appropriate values for initialization.
+
+initialize_growth_tumor = @(times=[0*86400:s]); indicator_growth_tumor = 1
+
+
+#---------------------------------------------------------------------------------------
+# Outputs 
+#---------------------------------------------------------------------------------------
+receptor_per_cell          = R_tumor/(Ncell_tumor + 1e-15:1) * (N_AV/nmol_per_mol)

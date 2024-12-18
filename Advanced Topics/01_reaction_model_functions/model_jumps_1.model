@@ -1,0 +1,160 @@
+%% ReactionModel@2 
+time_unit = s
+default_state_unit = 1
+
+initialization = steady_state(time_scale = 100*24*60*60:s)
+
+% components
+
+#-------------------------------------------------------------------------------------
+# PARAMETERS
+#-------------------------------------------------------------------------------------
+
+# Compartment volumes
+#--------------------
+vol_central               := 3:L
+vol_bm                    := 1.3:L
+     
+# LT-HSC dynamics
+#-----------------------
+r_lt_perday               := 0.05:(1/d)      # replication rate of LT-HSCs
+ss_lt                     := 1275            # steady-state LT-HSCs
+
+
+# Mean residence times
+#---------------------
+tau_lt_d                  := 100:d           # LT HSC
+tau_st_d                  := 20:d            # ST HSC
+tau_mpp_d                 := 2:d             # MPP
+tau_cmp_d                 := 4:d             # CMP
+tau_bfue_d                := 7:d             # BFU-E
+tau_cfue_d                := 7:d             # CFU-E
+tau_ret_d                 := 1:d             # Reticulocyte
+tau_rbc_d                 := 120:d           # RBC
+
+# Flux amplification at each differentiation stage
+#-------------------------------------------------
+amp_st                    := 1e3             # ST-HSC
+amp_mpp                   := 1e3             # MPP
+amp_cmp                   := 16              # CMP
+amp_bfue                  := 32              # BFU-E
+amp_cfue                  := 32              # CFU-E
+
+#-------------------------------------------------------------------------------------
+# ASSIGNMENTS
+#-------------------------------------------------------------------------------------
+
+# Conversion factors
+#-----------------------
+mL_per_L                   = 1e3:(mL/L)
+mg_per_g                   = 1e3:(mg/g)
+ug_per_g                   = 1e6:(ug/g)
+pg_per_g                   = 1e12:(pg/g)
+nmol_per_mol               = 1e9:(nmol/mol)
+SECONDS_PER_MINUTE         = 60:(s/min)
+MINUTES_PER_HOUR           = 60:(min/hr)
+SECONDS_PER_HOUR           = SECONDS_PER_MINUTE * MINUTES_PER_HOUR
+HOURS_PER_DAY              = 24:(hr/d)
+SECONDS_PER_DAY:(s/d)      = SECONDS_PER_HOUR * HOURS_PER_DAY
+N_AV                       = 6.022e23:(1/mol)
+
+
+# Mean residence times to seconds
+#---------------------------------
+tau_lt:s        = tau_lt_d   * SECONDS_PER_DAY
+tau_st:s        = tau_st_d   * SECONDS_PER_DAY
+tau_mpp:s       = tau_mpp_d  * SECONDS_PER_DAY
+tau_cmp:s       = tau_cmp_d  * SECONDS_PER_DAY
+tau_bfue:s      = tau_bfue_d * SECONDS_PER_DAY
+tau_cfue:s      = tau_cfue_d * SECONDS_PER_DAY
+tau_ret:s       = tau_ret_d  * SECONDS_PER_DAY
+tau_rbc:s       = tau_rbc_d  * SECONDS_PER_DAY
+
+
+# LT-HSC
+#-------
+k_lt2st      = 1/tau_lt                            # Rate constant for LT-HSC -> ST-HSC
+r_lt         = r_lt_perday/SECONDS_PER_DAY         # growth rate of LT-HSC in seconds
+kdeath_lt    = (r_lt - k_lt2st)/ss_lt              # death rate for LT-HSC
+
+# ST-HSC
+#-------
+krep_st      = (amp_st-1)/tau_st
+k_st2mpp     = amp_st/tau_st
+
+# MPP
+#-------
+krep_mpp     = (amp_mpp-1)/tau_mpp
+k_mpp2cmp    = amp_mpp/tau_mpp
+
+# CMP
+#-------
+krep_cmp     = (amp_cmp-1)/tau_cmp
+k_cmp2bfue   = amp_cmp/tau_cmp
+
+# BFU-E
+#-------
+krep_bfue    = (amp_bfue-1)/tau_bfue
+k_bfue2cfue  = amp_bfue/tau_bfue
+
+
+# CFU-E
+#-------
+krep_cfue    = (amp_cfue-1)/tau_cfue
+k_cfue2ret   = amp_cfue/tau_cfue
+
+
+# RET and RBC
+#------------
+k_ret2rbc    = 1/tau_ret
+kdeath_rbc   = 1/tau_rbc
+
+#-------------------------------------------------------------------------------------
+# States
+#-------------------------------------------------------------------------------------
+
+# Compartments
+# ------------
+central         ~ 3     = vol_central
+bonemarrow      ~ 3     = vol_bm
+
+# States
+# ------
+
+lt    @bonemarrow  *= 1        # logistic growth requires non-zero initialization
+st    @bonemarrow  *= 0
+mpp   @bonemarrow  *= 0
+cmp   @bonemarrow  *= 0
+bfue  @bonemarrow  *= 0
+cfue  @bonemarrow  *= 0
+ret   @bonemarrow  *= 0
+rbc   @central     *= 0
+
+
+
+#-------------------------------------------------------------------------------------
+# Reactions
+#-------------------------------------------------------------------------------------
+      <-> lt;             rf = r_lt * lt,      rr = kdeath_lt * lt * lt
+lt     -> st;             kf = k_lt2st
+st     -> st + st;        kf = krep_st
+st     -> mpp;            kf = k_st2mpp
+mpp    -> mpp + mpp;      kf = krep_mpp
+mpp    -> cmp;            kf = k_mpp2cmp
+cmp    -> cmp + cmp;      kf = krep_cmp
+cmp    -> bfue;           kf = k_cmp2bfue
+bfue   -> bfue + bfue;    kf = krep_bfue
+bfue   -> cfue;           kf = k_bfue2cfue
+cfue   -> cfue + cfue;    kf = krep_cfue
+cfue   -> ret;            kf = k_cfue2ret
+ret    ->  rbc;           kf = k_ret2rbc
+rbc    ->;                kf = kdeath_rbc
+
+#-------------------------------------------------------------------------------------
+# JUMP
+#-------------------------------------------------------------------------------------
+fdep                            := 0.9                      # fraction of cells depleted by preconditioning
+tdep:s                           = 10:d * SECONDS_PER_DAY   # time at which depletion occurs
+fr                               = 1 - fdep                 # Remaining fraction after preconditioning
+
+precond = @(times=[tdep]); lt = lt * fr, st = st * fr, mpp = mpp * fr, cmp = cmp * fr, bfue = bfue * fr, cfue = cfue * fr

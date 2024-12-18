@@ -1,0 +1,26 @@
+# Binding
+    # A reaction model of a binding reaction
+    # Includes basic initial condition and reaction
+    %% ReactionModel@2
+    % components
+
+    # parameters
+    kon := 0.5
+    koff := 0.2
+    kd := 0.2/0.5   # kd = koff/kon
+    b0 := 2
+
+    # compartment
+    v~3 = 5
+
+    a@v *= 1
+    b@v *= b0
+    c@v *= 0
+
+    d@v *= 1
+    e@v *= b0
+    f@v *= 0
+
+
+    a + b <-> c; kd = kd, kon = kon
+    d + e <-> f; kd = kd, koff = koff
