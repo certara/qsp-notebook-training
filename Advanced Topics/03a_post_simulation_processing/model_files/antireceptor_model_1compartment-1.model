@@ -1,0 +1,345 @@
+# In-vivo single receptor binding model
+#
+# Goal: This model introduces new hires to the structure and
+# syntax of reaction models to be run on the QSP notebook.
+#
+# Features: This model will simulate a drug in-vivo with: 
+#   - 1 3D compartment
+#   - Monospecific antibody
+#   - 1 Receptor ("R1")
+#   - 1 cell population
+#
+#
+# Basics of writing a reaction model. 
+# A reaction model can be made either with a text file or a python file. 
+# This tutorial will cover how to make a model with a text file. 
+# The hash symbol, "#", can be used to indicate a comment, 
+# anything after the # will be ignored by the parser.
+#
+# A reaction model can be broken into two parts: a header and components
+#
+# All reaction models have this format:
+#
+#   %% ReactionModel@2
+#   initialization = ...
+#   time_unit = ...
+#   default_state_unit = ...
+#   % components
+#   ...
+#
+# Each of the model settings, initialization, time_unit, and default_state_unit,
+# are optional. Their default values are discussed lower down.
+#
+# A reaction model may have an unlimited number of each of the six types of components:
+#   - Parameters
+#   - Assignments (including model readouts)
+#   - Compartments
+#   - States
+#   - Reactions
+#   - Routes
+# These parts can be written in any order and mixed freely to make the model more 
+# convenient to read.
+# 
+# When a simulation is run, the model will return all parameters, assignments, 
+# compartments, and states of the model at all timepoints.
+
+# All reaction model files must begin with this following line. The `@1` indicates 
+# the version allowing future versions to be released in a backwards-compatible way.
+
+
+%% ReactionModel@2
+
+
+
+# There are two types of values that can be provided to initialization
+# The first option is initial_value(), this starts the model with the initial values described. This is the default.
+# The second option is steady_state(), the starts the model simulation after a certain amount of time where
+# steady state has been reached in the model.
+# There are two arguments for steady state, time_scale and max_time. time_scale is a required argument that defines
+# the time over which, if the states change less than the tolerance, the model will be considered to be at steady state.
+# max_time is the maximum amount of time the solver will attempt to reach steady state. The default for max_time is set
+# to time_scale/reltol of the simulation.
+
+
+initialization = steady_state(time_scale = 86400:s)
+
+
+
+# time_unit defines the time unit of the model. The default is unitless.
+
+
+time_unit = s
+
+
+
+# default_state_unit defines the unit of a state that is not otherwise annotated.
+# The default is unitless.
+
+
+default_state_unit = nmol
+
+% components
+
+######################################################################################
+# Parameters
+# The parameter section defines variables such as rates, initial values, and 
+# conversion factors to be used in the model. These will be calculated at the
+# initialization of the model and will not change during the simulation of the model.
+# These are easily accessible and configurable during model simulation.
+
+# The syntax for a parameter is:
+# name: unit := static expression
+#
+# The value can be a static expression (i.e. no other variables), not just a number
+#
+# The unit is optional. If it can be inferred from the value, it will take that unit.
+# If the value is a literal expression, the unit will default to unitless.
+# If not provided, it will be inferred from the expression. 
+# Available units:
+
+# time_unit_names = {"fs", "ps", "ns", "us", "ms", "s", "min", "hr", "d", "w"}
+# length_unit_names = {"fm", "pm", "nm", "um", "mm", "dm", "m"}
+# mass_unit_names = {"fg", "pg", "ng", "ug", "mg", "g", "kg"}
+# volume_unit_names = {"fL", "pL", "nL", "uL", "mL", "dL", "L"}
+# amount_unit_names = {"fmol", "pmol", "nmol", "umol", "mmol", "mol"}
+# concentration_unit_names = {"fM", "pM", "nM", "uM", "mM", "M"}
+# molecular_mass_unit_names = {"Da", "kDa", "MDa"}
+
+
+# Parameters defining initial conditions
+volume_central:L      := 5:L
+R1_per_cell:1         := 1e4:1
+cell_per_mL:(1/mL)    := 1e6:(1/mL)
+
+# Parameters defining rates
+kon:(1/nM/s)          := 0.001:(1/nM/s)
+kd_mab:nM             := 0.1:nM
+el_half:d             := 28:d 
+abs_half:d            := 2.5:d 
+R1_half:min           := 60:min 
+
+# Parameters for dosing drug
+BW:kg                 := 70:kg
+mw:(g/mol)            := 150000:(g/mol)
+interval:d            := 3 * 7:d
+dose:(mg/kg)          := 1:(mg/kg)
+dose_count:1          := 7:1
+start_output_time:(s) := 0:(s)
+stop_output_time:(s)  := 86400:(s)
+
+# cytokine model parameters 
+Thalf_cytokine_h:hr   := 6:hr
+
+# in this example, drug RO drives cytokine secretion, but note that this is dependent on the biology of the system that is being modeled
+RO50_perc:1           := 5:1 # RO at which 50% of cytokine secretion occurs
+ksecrete_max_nmolpercellsec:(nmol/s)     := 1E-13:(nmol/s)
+
+
+######################################################################################
+# Assignments
+# Assignments are numerical expressions that can be used to define additional named values.
+# You can use any parameter, state, or other assignment in an assignment. Assignments can be used 
+# throughout the model (e.g. reaction microconstants) or just to create readouts of the model,
+# such as PK or RO.
+
+# The syntax of a rule is:
+# rule_name: unit = numerical expression
+
+# Conversion factors (those with just values could have been defined as parameters)
+mL_per_L:(mL/L)               = 1e3:(mL/L)
+mg_per_g:(mg/g)               = 1e3:(mg/g) 
+ug_per_g:(ug/g)               = 1e6:(ug/g)
+nmol_per_mol:(nmol/mol)       = 1e9:(nmol/mol) 
+SECONDS_PER_MINUTE:(s/min)    = 60:(s/min)
+SECONDS_PER_HOUR:(s/hr)     = SECONDS_PER_MINUTE * 60:(min/hr)
+SECONDS_PER_DAY:(s/d)         = SECONDS_PER_HOUR * 24:(hr/d)
+N_AV:(1/mol)                  = 6.022e23:(1/mol)
+
+# Note that when annotating units, the unit ":" operator has operator precedence over 
+# everything. For example, 1/24:hr would be the same as 1/(24:hr) rather than (1/24):hr.
+
+# Macroparameter to microparameter conversions
+# As best practice, microparameters are defined with the amount units of nmol, and time units of s.
+# When a microparameter deviates from this practice, it is best to label that parameter with the units.
+
+ugml_per_nM            = mw * ug_per_g / mL_per_L / nmol_per_mol
+kabs                   = log(2) / (abs_half * SECONDS_PER_DAY)
+kclear_Ab              = log(2) / (el_half * SECONDS_PER_DAY)
+kon_Ab_T1              = kon
+koff_Ab_T1             = kd_mab * kon
+kclear_R1              = log(2) / (R1_half * SECONDS_PER_MINUTE)
+kclear_Ab_R1           = kclear_R1
+
+# Defining initial state values
+total_cells_central    = cell_per_mL * volume_central * mL_per_L
+total_R1_central       = R1_per_cell * total_cells_central / N_AV * nmol_per_mol
+R1_central_0           = total_R1_central
+ksynth_R1_central      = kclear_R1 * R1_central_0
+
+# cytokine microparameters
+kclear_cytokine:(1/s)  = log(2)/(Thalf_cytokine_h*SECONDS_PER_HOUR)
+RO50_frac              = RO50_perc / 100
+cell_num               = cell_per_mL * volume_central * 1000:(mL/L)
+
+######################################################################################
+# Routes
+# Routes consist of 4 parts: the name, the amount unit, the schedule, and the effects.
+# The schedule defines the times and amounts to be applied to that route. A model can be run with different
+# schedules, just like it can be run with different parameters.
+#
+# To define a route, you first specify the name of the route. Then you optionally supply a unit for the route amount.
+# Then you specify the schedule, which is the times and amounts of the doses for that route. Finally, you specify the
+# states that the dose affects. Often, the dose is applied to only a single state. The effect must start with
+# `name += amt`.
+
+# The syntax of a route is:
+# name: amount_unit = schedule; state1 += amt, state2 += amt * multiplier ...
+
+# If the amount unit is not supplied, then it will be inferred from the schedule. If it cannot be inferred from the
+# schedule (i.e. it is an empty schedule), then the amount unit will be inferred to be dimensionless.
+
+# There are three types of schedules, empty, list, and repeated schedules. They have the
+# following syntax, respectively:
+# empty: @()
+# list: @(times=[numeric expression, ...], amounts=[numeric_expression, ...])
+# repeated: @(start=numeric expression, interval=numeric expression, stop=numeric expression, amount=numeric expression)
+#
+# The start and stop arguments of repeated schedules are optional; the default value of start is 0.0 and 
+# the default value of stop is inf. All numeric expressions in schedules may only use parameters and other
+# pre-determined constants (i.e. no states or assignments that depend on them).
+
+# Any routes listed here will automatically be applied when running a simulation. If you have multiple routes that
+# you plan to swap between, you should set them to an empty schedule ("null") to ensure you don't have multiple routes
+# applied at once or have to remember to turn them off before simulation.
+# To turn on a dose route, you should give the route a non-empty schedule when defining a model reference.
+
+# This takes an nmol amount @ time zero and applies it to the free drug or subcutaneous drug as a 1-1 dose. 
+IV_nmol: nmol = @();  Ab_00_central += amt
+SC_nmol: nmol = @();  Ab_depot += amt
+
+# This takes a mpk amount and applies it to the free drug or subcutaneous drug. Notice the effect converts the mpk to 
+# nmols using rule variables defined earlier in the file.
+
+IV_mpk: (mg/kg) = @();  Ab_00_central += amt * (nmol_per_mol * BW) / (mg_per_g * mw)
+SC_mpk: (mg/kg) = @();  Ab_depot += amt * (nmol_per_mol * BW) / (mg_per_g * mw)
+
+######################################################################################
+# Compartments
+
+# The syntax of a compartment is:
+# name~dimension = size
+
+central~3 = volume_central
+
+
+######################################################################################
+# States
+# States are the species of the model. These values can change over time as the model is simulated. It is distinguished from
+# parameters with a * symbol after the name/unit. You can define an initial condition for the state after the equal sign.
+# If the unit cannot be inferred from the initial value, it takes on the default of default_state_unit. It is
+# actually pretty uncommon to specify a unit because most states are in the same unit.
+
+# The syntax of a state is:
+# name@compartment: unit *= initial_value
+
+Ab_depot@central:nmol*         = 0:nmol
+
+R1_central@central:nmol*       = R1_central_0
+
+Ab_00_central@central:nmol*    = 0:nmol
+Ab_R1_central@central:nmol*    = 0:nmol
+
+cytokine_central@central:nmol* = 0:nmol
+
+######################################################################################
+# Reactions
+# Reactions consist of reactants, products, and reaction parameters. Reactants and products must be states in the model.
+# There are four different kinds of reactions: forward mass action, reversible mass action, forward analytic, 
+# and reversible analytic. The names (kf, rk, rf, and rr) associated with the reaction parameters determine
+# which kind of reaction it is. If there is no product or reactant, that corresponding side must be left blank.
+#
+# The syntax of the reaction types is:
+#
+# forward mass action:
+# reactant1 + reactant2 -> product1 + product2 + ...; kf = rate_parameter
+#
+# reversible mass action:
+# reactant1 + reactant2 <-> product1 + product2 + ...; kf = forward_rate_parameter, kr = reverse_rate_parameter
+#
+# forward analytic:
+# reactant1 + reactant2 + ... -> product1 + product2 + ...; rf = rate
+#
+# reversible analytic:
+# reactant1 + reactant2 + ... <-> product1 + product2 + ...; rf = forward_rate, rr = reverse_rate
+#
+# For analytic reactions, there is no limit on the number of reactants or products. For mass action reactions,
+# there can only be two reactants.
+# Reaction parameters can be any numerical expression of parameters or states.
+
+# NOTE: It is important to remember that typically the models in the abm software are defined using units of amounts and not units of
+# concentration. Thus, when defining analytic reactions, depending on the order of your reaction, you may need to adjust your rates by the volume or area units to balance
+# the units of the reaction. For example, a 2nd order binding reaction would have the kon rate (kon) * (reactant1) * (reactant2) / (volume).
+# This is because the units must cancel out to nmol/s, so we must have the units be (vol/nmol/s) * (nmol) * (nmol) / (vol).
+
+# Synthesis and degradation reactions
+Ab_depot      -> Ab_00_central;   kf = kabs
+              -> R1_central;      kf = ksynth_R1_central
+R1_central    ->;                 kf = kclear_R1
+
+# Drug degradation reactions
+Ab_00_central ->;                 kf = kclear_Ab
+Ab_R1_central ->;                 kf = kclear_Ab_R1
+
+# Drug Binding
+R1_central + Ab_00_central -> Ab_R1_central;               kf = kon_Ab_T1
+Ab_R1_central              -> R1_central + Ab_00_central;  kf = koff_Ab_T1
+
+## Relating RO to cytokine secretion; an example of an analytical reaction rate
+# cells in assay secrete the cytokine in an RO dependent manner and internalize it at an unsaturable rate
+
+# Define RO output which will be used in the rate expression
+RO_frac = Ab_R1_central / (R1_central + Ab_R1_central)
+
+# cytokine synthesis reaction with analytic rate
+n = 7 # a hill coefficient > 1 is required to allow the hill function to approach a value of one for a reasonable range of RO50s
+-> cytokine_central; rf = ksecrete_max_nmolpercellsec * cell_num * (RO_frac^n/(RO_frac^n + RO50_frac^n))
+
+# cytokine clearance reaction, 1st order clearance
+cytokine_central ->; kf = kclear_cytokine
+
+######################################################################################
+# Outputs of the model are just assignments, but it makes sense to define them at
+# the end of the model.
+
+# Defining model readouts 
+free_R1_central:nmol        = R1_central
+free_drug_central:nmol      = Ab_00_central
+bound_drug_central:nmol     = Ab_R1_central
+total_drug_central:nmol     = Ab_00_central + Ab_R1_central
+free_drug_central_nM:nM     = Ab_00_central / volume_central + 1e-16:nM
+drug_percent_bound:1        = bound_drug_central / (total_drug_central + 1e-16:nmol) * 100 
+receptor_occupancy:1        = Ab_R1_central / (R1_central + Ab_R1_central + 1e-16:nmol) * 100
+cytokine_central_nM:nM      = cytokine_central / volume_central + 1e-16:nM
+
+# There are three optional summary functions that can be calculated within the model. These are mean, max, and min.
+# For each of these the inputs are value to be summarized, start time of calculation (in seconds), and end time of calculation (in seconds)
+#ex: mean(R1_central, a:s, b:s) would calculate the mean of the R1_central state variable between times a and b
+
+mean_receptor_occupancy :(1)  = mean(receptor_occupancy, start_output_time, stop_output_time)
+
+
+# Functions
+# There are several functions that can be used for outputs, which are listed here. These functions are
+# retooled sympy functions, so you can reference the sympy documentation for each function.
+# List of functions
+# exp(x) - returns e^x
+# log(x) - returns ln(x)
+# log2(x) - returns log base 2 of x
+# log10(x) - returns log base 10 of x
+# sqrt(x) - returns square root of x
+# pow(x, y) - returns x^y 
+# floor(x) - returns x rounded down to the nearest whole number
+# ceil(x) - returns x rounded up to the nearest whole number
+# sin(x)
+# cos(x)
+# tan(x)

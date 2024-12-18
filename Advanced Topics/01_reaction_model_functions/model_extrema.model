@@ -1,0 +1,56 @@
+%% ReactionModel@2
+% components
+j := 0.1
+k := 0.5
+
+# Solution:
+# a = sin(k * t)
+# b = exp(-j * t), up to dose
+
+a *= 0
+a_dot *= k
+u = -k^2 * a
+ -> a; rf = a_dot
+ -> a_dot; rf = u
+
+b *= 1
+b -> ; kf = j
+r_b: (1) = @(times=[10], amounts=[2]); b += amt
+
+
+# Some more parameters and assignments for the outputs
+t1 := 0.1
+t2 := 1.1
+z1 = 2 * t1
+z2 = 4 * t2
+
+# max(x, a, b) is the maximum of x over the time-interval [a, b].  Similarly, 
+# min(x, a, b) is the minimum of x over over this interval.  All three arguments 
+# are required.
+y1 = max(a, 0, 10)
+y2 = min(a, 0, 10)
+
+# Extrema may be achieved at endpoints
+y3 = max(b, 1, 4)
+y4 = min(b, 1, 4)
+
+# Extrema may be achieved at discontinuities (e.g. from dosing or jumps)
+y5 = max(b, 9, 12)
+y6 = min(b, 9, 12)
+
+# The maximized/minimized expression may be any local expression involving t, 
+# state, parameters, and assignments.  The bounds may be any predetermined 
+# assignment.  For example,
+y7 = max(a * b, 0, 9)
+y8 = min(a * b, 0, 9)
+y9 = max(u, z1, z2)
+y10 = min(u, z1, z2)
+
+# The following are invalid:
+# y11 = max(a, 2)                     # Both bounds are required
+# y12 = max(a[1], 0, 2)               # Maximized expression must be local
+# y13 = max(min(a, 0, 1), 0, 2)       # Maximized expression must be local
+# y14 = max(a, 2*a, 2)                # Bounds must be predetermined
+# y15 = max(a, 2, 1)                  # Bounds must be nondecreasing
+
+# Also, like indexed and integral expressions, extrema may not appear in reaction rates.

@@ -1,0 +1,155 @@
+# In-vivo 2 compartment model with both micro and macro constants
+#
+# Goal: This model introduces new hires to the structure and
+# syntax of reaction models to be run on the QSP notebook.
+#
+# Features: This model will simulate a drug in-vivo with: 
+#   - 3D compartment
+#   - Monospecific antibody ("Ab1")
+#   - Receptor ("R1")
+#
+#
+
+%% ReactionModel@2
+
+initialization = steady_state(time_scale = 86400:s)
+
+time_unit = s
+
+default_state_unit = nmol
+
+% components
+
+######################################################################################
+# Parameters
+
+# Parameters defining initial conditions
+volume_central:L      := 5:L
+volume_peripheral:L   := 13:L
+R_per_cell:1          := 1e4:1
+cell_per_mL:(1/mL)    := 1e6:(1/mL)
+
+# Parameters defining rates
+kon:(1/nM/s)          := 0.001:(1/nM/s)
+kd_mab:nM             := 0.1:nM
+el_half:d             := 28:d
+R_half:min            := 60:min
+Pdist:1               := 0.12
+Tdist_hr:hr           := 12:hr
+
+# Parameters for dosing drug
+BW:kg                 := 70:kg
+mw:(g/mol)            := 150000:(g/mol)
+
+######################################################################################
+# Assignments
+#
+# The syntax of a rule is:
+# rule_name: unit = numerical expression
+
+# Conversion factors (those with just values could have been defined as parameters)
+mL_per_L:(mL/L)               = 1e3:(mL/L)
+mg_per_g:(mg/g)               = 1e3:(mg/g)
+ug_per_g:(ug/g)               = 1e6:(ug/g)
+nmol_per_mol:(nmol/mol)       = 1e9:(nmol/mol)
+SECONDS_PER_MINUTE:(s/min)    = 60:(s/min)
+SECONDS_PER_HOUR:(s/hr)       = SECONDS_PER_MINUTE * 60:(min/hr)
+SECONDS_PER_DAY:(s/d)         = SECONDS_PER_HOUR * 24:(hr/d)
+N_AV:(1/mol)                  = 6.022e23:(1/mol)
+
+# Note that when annotating units, the unit ":" operator has operator precedence over 
+# everything. For example, 1/24:hr would be the same as 1/(24:hr) rather than (1/24):hr.
+
+
+# Defining initial state values
+total_cells_central    = cell_per_mL * volume_central * mL_per_L
+total_R1_central       = R_per_cell * total_cells_central / N_AV * nmol_per_mol
+R1_central_0           = total_R1_central
+
+######################################################################################
+# Routes
+# The syntax of a route is:
+# name: amount_unit = schedule; state1 += amt, state2 += amt * multiplier ...
+#
+# Any routes listed here will automatically be applied when running a simulation. If you have multiple routes that
+# you plan to swap between, you should set them to an empty schedule ("null") to ensure you don't have multiple routes
+# applied at once or have to remember to turn them off before simulation.
+# To turn on a dose route, you should give the route a non-empty schedule when defining a model reference.
+
+# This takes an nmol amount @ time zero and applies it to the free drug or subcutaneous drug as a 1-1 dose. 
+#
+
+IV_mpk: (mg/kg) = @();  Ab1_00_central += amt * (nmol_per_mol * BW) / (mg_per_g * mw)
+
+######################################################################################
+# Compartments
+
+# The syntax of a compartment is:
+# name~dimension = size
+
+central~3 = volume_central
+peripheral~3 = volume_peripheral
+
+######################################################################################
+# States
+# The syntax of a state is:
+# name@compartment: unit *= initial_value
+
+R1_central@central*        = R1_central_0
+Ab1_00_central@central*    = 0
+Ab1_R1_central@central*    = 0
+Ab1_peripheral@peripheral* = 0
+drug_depot@central*        = 0
+
+######################################################################################
+# Reactions
+#
+
+#Synthesis and degradation reactions
+              <-> R1_central;      css=total_R1_central/volume_central, thalf=R_half * SECONDS_PER_MINUTE
+
+# Drug degradation reactions
+Ab1_00_central ->;                 thalf = el_half * SECONDS_PER_DAY
+Ab1_R1_central ->;                 thalf = R_half * SECONDS_PER_MINUTE
+
+
+Ab1_peripheral ->;              thalf = el_half * SECONDS_PER_DAY
+
+# Drug Binding
+R1_central + Ab1_00_central <-> Ab1_R1_central;               kd = kd_mab, kon = kon
+
+# Drug Transport
+Ab1_00_central <-> Ab1_peripheral;                 pdist = Pdist, tdist = Tdist_hr * SECONDS_PER_HOUR
+
+
+######################################################################################
+# Outputs of the model are just assignments, but it makes sense to define them at
+# the end of the model. Best practice is to assign units to outputs to make sure 
+# units are as expected.
+
+# Defining model readouts
+free_R1_central      :(nmol)  = R1_central
+free_drug1_central    :(nmol)  = Ab1_00_central
+bound_drug1_central   :(nmol)  = Ab1_R1_central
+total_drug1_central   :(nmol)  = Ab1_00_central + Ab1_R1_central
+
+RO1:1 = Ab1_R1_central / (R1_central + Ab1_R1_central) * 100
+free_drug_ngml:ng/mL = free_drug1_central * mw / (volume_central * mL_per_L)
+
+# Functions
+# There are several functions that can be used for outputs, which are listed here.
+# List of functions
+# exp(x) - returns e^x
+# log(x) - returns ln(x)
+# log2(x) - returns log base 2 of x
+# log10(x) - returns log base 10 of x
+# sqrt(x) - returns square root of x
+# pow(x, y) - returns x^y 
+# floor(x) - returns x rounded down to the nearest whole number
+# ceil(x) - returns x rounded up to the nearest whole number
+# sin(x)
+# cos(x)
+# tan(x)
+# mean(x, start time, stop time)
+# max(x, start time, stop time)
+# min(x, start time, stop time)

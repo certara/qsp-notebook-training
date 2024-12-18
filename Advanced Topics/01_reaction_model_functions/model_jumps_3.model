@@ -1,0 +1,98 @@
+%% ReactionModel@2
+
+initialization     = steady_state(time_scale=10*24*60*60:s)
+
+time_unit          = s
+default_state_unit = nmol
+
+
+% components
+
+#---------------------------------------------------------------------------------------
+# PARAMETERS
+#---------------------------------------------------------------------------------------
+
+# volumes
+vol_media                   := 2e-3:L
+vol_cell                    := 2e-12:L
+
+# initial condition
+R_per_cell                  := 1.6e6
+num_cells                   := 1.2e6
+
+# binding
+kon                         := 1e-4:(1/nM/s)
+Kd                          := 0.6:nM
+
+# intracellular
+kendo                       := 1e-4:(1/s)
+krec                        := 1e-6:(1/s)
+kdeg                        := 1e-4:(1/s)
+
+#---------------------------------------------------------------------------------------
+# ASSIGNMENTS
+#---------------------------------------------------------------------------------------
+
+# Conversion factors
+mL_per_L                     = 1e3:(mL/L)
+mg_per_g                     = 1e3:(mg/g) 
+ug_per_g                     = 1e6:(ug/g)
+nmol_per_mol                 = 1e9:(nmol/mol)
+SECONDS_PER_MINUTE           = 60:(s/min)
+MINUTES_PER_HOUR             = 60:(min/hr) 
+SECONDS_PER_HOUR             = SECONDS_PER_MINUTE * MINUTES_PER_HOUR
+HOURS_PER_DAY                = 24:(hr/d)
+SECONDS_PER_DAY:(s/d)        = SECONDS_PER_HOUR * HOURS_PER_DAY
+N_AV                         = 6.022e23:(1/mol)
+
+
+# parameter relationships
+vol_cell_total                     = num_cells * vol_cell
+R_total_nmol                       = R_per_cell * num_cells * nmol_per_mol/N_AV
+ksyn_R                             = R_total_nmol * kendo * (kdeg/(kdeg + krec))
+koff                               = kon * Kd
+
+
+
+
+
+#---------------------------------------------------------------------------------------
+# States 
+#---------------------------------------------------------------------------------------
+
+# compartments
+media                 ~ 3          = vol_media
+cell                  ~ 3          = vol_cell_total
+
+# states
+R                @ media           *= 0
+Ab_0             @ media           *= 0
+Ab_R             @ media           *= 0
+R_endo           @ cell            *= 0
+Ab_R_endo        @ cell            *= 0
+
+media_indicator  @ cell    :1      *= 1       # if set to zero, shuts off intracellular processes (receptor binding occurs)
+
+#---------------------------------------------------------------------------------------
+# Routes 
+#---------------------------------------------------------------------------------------
+
+IV_Ab_nmol:nmol = @();      Ab_0        += amt
+
+#---------------------------------------------------------------------------------------
+# Jumps 
+#---------------------------------------------------------------------------------------
+
+media_ice = @(times=[0:s]); media_indicator = 0:1           # at t=0,    shut off all processes except binding
+media_remove = @(times=[3600:s]);  media_indicator = 1:1, Ab_0 = 0:(nmol)  # at t=3600, remove Ab in media and resume normal dynamics
+
+#---------------------------------------------------------------------------------------
+# Reactions 
+#---------------------------------------------------------------------------------------
+
+             -> R;               rf = ksyn_R * media_indicator                                                        # receptor production
+R + Ab_0    <-> Ab_R;            kf = kon,                             kr = koff                                      # binding
+R           <->   R_endo;        rf = kendo * media_indicator * R,     rr = krec * media_indicator * R_endo           # endocytosis and recycling of free receptor
+Ab_R        <->   Ab_R_endo;     rf = kendo * media_indicator * Ab_R,  rr = krec * media_indicator * Ab_R_endo        # endocytosis and recycling of bound receptor
+R_endo       ->   ;              rf = kdeg * media_indicator * R_endo                                                 # endosomal degradation of free receptor
+Ab_R_endo    ->   ;              rf = kdeg * media_indicator * Ab_R_endo                                              # endosomal degradation of bound receptor
