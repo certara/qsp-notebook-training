@@ -1,0 +1,26 @@
+%% ReactionModel@2
+
+time_unit = s
+
+% components
+
+# compartments
+V_L    := 1:L
+solution~3   = V_L
+
+# states
+drug@solution *=  1:(nmol)
+
+# targeting a parameter can't be done by event,
+# so make parameter a state
+kcl *= 0.693:(1/s)
+
+# parameters - *strictly* numeric values, can't be updated
+# kcl:(1/s)  = 0.693:(1/s) # incorrect way to target parameter
+
+# reactions
+drug -> ; kf=kcl
+
+# events
+@(drug < 0.5:(nmol)); kcl=0
+@(t > 10:(s)); kcl=0.693:(1/s)
