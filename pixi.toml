@@ -1,7 +1,10 @@
-[project]
+[workspace]
 name = "qsp-notebook-training"
 channels = ["conda-forge"]
 platforms = ["linux-aarch64", "linux-64"]
+
+[system-requirements]
+libc = "2.39"
 
 [dependencies]
 python = "=3.12"
